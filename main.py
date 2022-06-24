@@ -101,7 +101,7 @@ def telegram_bot(token):
         if check_vin(vin):
             if os.path.exists(dir_to_save + vin + '.pdf'):
                 bot.send_document(message.chat.id, document=open(dir_to_save + vin + '.pdf', 'rb'))
-                print('This VIN was already processed.')
+                print('This VIN was already processed!')
 
             else:
                 url_pdf = get_url_pdf(vin)
