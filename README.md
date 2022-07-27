@@ -1,4 +1,4 @@
 # BMW-VIN-Decoder
-Webservice for calculating the cost of buying a car from the USA.
-The service calculates the full cost of purchasing a vehicle from US auctions to Ukraine, 
-which includes the cost of the lot, shipping, customs duties, and registration.
+Telegram bot for one-click BMW package decoding.
+To decoding the equipment enough to enter the VIN number and within
+2-3 minutes you will receive a message with a full decoding in PDF file.
