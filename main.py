@@ -1,21 +1,23 @@
 from anticaptchaofficial.recaptchav2proxyless import *
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from pathlib import Path
 import telebot
 import requests
 import time
 import os
 
-dir_to_save = str(Path.cwd()) + '/Storage/'
+from dotenv import load_dotenv
+load_dotenv()
 
 
 def check_vin(vin: str) -> bool:
     """Checks VIN for correctness"""
 
     vin = vin.upper()
-    if len(vin) == 17 and (vin.startswith('WBA') or vin.startswith('WBS')):
+    print(vin[0:3])
+    if len(vin) == 17 and vin[0:3] in ('WBA', 'WBY', 'WBS', '5YM', '5UX'):
         return True
     return False
 
@@ -24,9 +26,10 @@ def save_pdf(url_pdf: str, vin: str) -> None:
     """Saves the PDF file in the project directory"""
 
     pdf_data = requests.get(url_pdf)
+    pdf_name = vin + '.pdf'
     print(f'Saving: {vin}')
 
-    with open(dir_to_save + vin + '.pdf', 'wb') as file:
+    with open('./Storage/' + pdf_name, 'wb') as file:
         file.write(pdf_data.content)
 
 
@@ -35,7 +38,7 @@ def solve_recaptcha(url: str, sitekey: str) -> str:
 
     solver = recaptchaV2Proxyless()
     solver.set_verbose(1)
-    solver.set_key(os.getenv('API_Anticaptcha'))
+    solver.set_key(os.getenv('ANTICAPTCHA_KEY'))
     solver.set_website_url(url)
     solver.set_website_key(sitekey)
 
@@ -51,8 +54,11 @@ def get_url_pdf(vin: str):
     and returns a URL to the PDF decoding
     of the requested VIN"""
 
-    url = "https://bimmer.work"
-    driver = webdriver.Chrome(executable_path='/home/yn/Documents/chromedriver')
+    url = os.getenv('URL')
+
+    chromeOptions = Options()
+    chromeOptions.headless = True
+    driver = webdriver.Chrome(executable_path='./chromedriver', options=chromeOptions)
     driver.get(url)
 
     vin_form = driver.find_element(By.NAME, "vin")
@@ -77,10 +83,11 @@ def get_url_pdf(vin: str):
 
     url_pdf = driver.current_url[:-1] + '.pdf'
     print(url_pdf)
+    driver.quit()
     return url_pdf
 
 
-def telegram_bot(token):
+def telegram_bot(token: str) -> None:
     """Initiating the Telegram bot"""
     bot = telebot.TeleBot(token)
 
@@ -88,7 +95,7 @@ def telegram_bot(token):
     def start_message(message):
         """Sends a welcome message"""
         bot.send_message(message.chat.id, 'My name is Hans, I am from Munich. I know how to decode the equipment of\
-                                            your BMW! Just send me the VIN number...')
+                                            your BMW! Just send me the VIN number:')
 
     @bot.message_handler(content_types=["text"])
     def handle_text(message):
@@ -96,18 +103,19 @@ def telegram_bot(token):
 
         vin = message.text
         print(f'Processing: {vin}')
-        bot.send_message(message.chat.id, "Wait a moment, I'm processing your request, it takes a few minutes...)")
+        bot.send_message(message.chat.id, "Processing your request, it takes a few minutes...")
 
         if check_vin(vin):
-            if os.path.exists(dir_to_save + vin + '.pdf'):
-                bot.send_document(message.chat.id, document=open(dir_to_save + vin + '.pdf', 'rb'))
+            if os.path.exists('./Storage/' + vin + '.pdf'):
+                bot.send_document(message.chat.id, document=open('./Storage/' + vin + '.pdf', 'rb'))
+
                 print('This VIN was already processed!')
 
             else:
                 url_pdf = get_url_pdf(vin)
                 if url_pdf:
                     save_pdf(url_pdf, vin)
-                    bot.send_document(message.chat.id, document=open('/home/yn/Downloads/' + vin + '.pdf', 'rb'))
+                    bot.send_document(message.chat.id, document=open('./Storage/' + vin + '.pdf', 'rb'))
                 else:
                     bot.send_message(message.chat.id, 'Incorrect VIN number or something went wrong. Try again!')
 
@@ -118,9 +126,14 @@ def telegram_bot(token):
 
 
 def main() -> None:
-    token = os.getenv('API_VIN_BMW')
-    telegram_bot(token)
+    telegram_bot(os.getenv('BOT_TOKEN'))
 
 
 if __name__ == '__main__':
     main()
+
+
+
+
+
+
