@@ -16,8 +16,8 @@ def check_vin(vin: str) -> bool:
     """Checks VIN for correctness"""
 
     vin = vin.upper()
-    print(vin[0:3])
     if len(vin) == 17 and vin[0:3] in ('WBA', 'WBY', 'WBS', '5YM', '5UX'):
+        print('VIN is correct.')
         return True
     return False
 
@@ -44,6 +44,7 @@ def solve_recaptcha(url: str, sitekey: str) -> str:
 
     g_response = solver.solve_and_return_solution()
     if g_response != 0:
+        print('g_response: ', g_response)
         return g_response
     else:
         print('task finished with error ' + solver.error_code)
@@ -67,7 +68,7 @@ def get_url_pdf(vin: str):
     sitekey = driver.find_element(By.XPATH, '/html/body/div[2]/div/div[2]/div/form/div[3]/div').get_attribute(
         'outerHTML')
     sitekey_clean = sitekey.split('"><div style="width:')[0].split('data-sitekey="')[-1]
-    print('sitekey_clean: ', sitekey_clean)
+    print('Sitekey_clean: ', sitekey_clean)
 
     g_response = solve_recaptcha(url, sitekey_clean)
 
@@ -82,7 +83,7 @@ def get_url_pdf(vin: str):
         return False
 
     url_pdf = driver.current_url[:-1] + '.pdf'
-    print(url_pdf)
+    print('URL to PDF: ', url_pdf)
     driver.quit()
     return url_pdf
 
@@ -108,21 +109,27 @@ def telegram_bot(token: str) -> None:
         if check_vin(vin):
             if os.path.exists('./Storage/' + vin + '.pdf'):
                 bot.send_document(message.chat.id, document=open('./Storage/' + vin + '.pdf', 'rb'))
-
                 print('This VIN was already processed!')
+                print('The process is complete!')
 
             else:
                 url_pdf = get_url_pdf(vin)
                 if url_pdf:
                     save_pdf(url_pdf, vin)
                     bot.send_document(message.chat.id, document=open('./Storage/' + vin + '.pdf', 'rb'))
+                    print('The process is complete!')
                 else:
                     bot.send_message(message.chat.id, 'Incorrect VIN number or something went wrong. Try again!')
 
         else:
             bot.send_message(message.chat.id, 'Incorrect VIN number or something went wrong. Try again!')
 
-    bot.polling(none_stop=True, interval=0)
+    while True:
+        try:
+            bot.polling(none_stop=True)
+        except Exception as _ex:
+            print(_ex)
+            time.sleep(15)
 
 
 def main() -> None:

@@ -6,3 +6,5 @@ requests==2.28.0
 PyTelegramBotAPI==4.6.0
 environ==1.0
 
+
+python-dotenv==0.20.0
